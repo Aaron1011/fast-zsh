@@ -1,0 +1,14 @@
+[package]
+name = "zsh"
+version = "0.1.0"
+authors = ["Aaron Hill <aa1ronham@gmail.com>"]
+
+[dependencies]
+lazy_static = "0.2"
+
+[build-dependencies]
+bindgen = "0.26.3"
+
+[lib]
+name = "fastbrackets"
+crate-type = ["dylib"]
