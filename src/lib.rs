@@ -12,11 +12,9 @@ extern crate lazy_static;
 
 mod brackets;
 
-use std::ptr::{null, null_mut};
+use std::ptr::null_mut;
 use std::os::raw::{c_int, c_char};
 use std::ffi::{CString, CStr};
-use std::mem::transmute;
-use std::slice;
 
 use brackets::brackets_paint;
 
@@ -65,6 +63,7 @@ lazy_static! {
 
 
 #[no_mangle]
+#[allow(unused_variables)]
 pub extern fn setup_(m: Module) -> c_int {
     println!("Setup!");
     //unsafe { bintab.0[0].node.nam = CString::new("Hi").unwrap().into_raw() }
@@ -72,18 +71,21 @@ pub extern fn setup_(m: Module) -> c_int {
 }
 
 #[no_mangle]
+#[allow(unused_variables)]
 pub extern fn boot_(m: Module) -> c_int {
     println!("Boot!");
     0
 }
 
 #[no_mangle]
+#[allow(unused_variables)]
 pub extern fn cleanup_(m: Module) -> c_int {
     println!("Cleanup!");
     0
 }
 
 #[no_mangle]
+#[allow(unused_variables)]
 pub extern fn finish_(m: Module) -> c_int {
     println!("Finish!");
     0
@@ -108,6 +110,7 @@ pub extern fn enables_(m: Module, enables: *mut *mut c_int) -> c_int {
 }
 
 #[no_mangle]
+#[allow(unused_variables)]
 pub extern fn bin_fastbrackets(name: *mut c_char, mut raw_args: *mut *mut c_char, options: Options, func: c_int) -> c_int {
     let mut args: Vec<String> = Vec::new();
 
@@ -118,18 +121,17 @@ pub extern fn bin_fastbrackets(name: *mut c_char, mut raw_args: *mut *mut c_char
         }
     }
 
-    let cursor = 0;
-    if args.len() == 2 {
-        let cursor = 0;
+    let cursor = if args.len() == 2 {
+        0
     } else {
-        let cursor = match args[2].parse::<usize>() {
+        match args[2].parse::<usize>() {
             Ok(s) => s,
             Err(e) => {
                 unsafe { zwarnnam(name, CString::new(format!("Invalid cursor argument: {:?}", e)).unwrap().into_raw()) } ;
                 return 1
             }
-        };
-    }
+        }
+    };
     brackets_paint(&args[0], &args[1], cursor);
 
     0

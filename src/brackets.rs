@@ -1,18 +1,14 @@
-#![crate_type = "dylib"]
-
 use std::collections::HashMap;
 use std::ffi::CString;
 use linkroot;
 use std::os::raw::{c_char, c_void};
-use {shfunc, getshfunc, doshfunc, Shfunc, newlinklist, insertlinknode, linknode};
+use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode};
 
 pub fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
     let mut style: String;
     let mut level: usize = 0;
-    let mut matching_pos: usize = 0;
-    let mut bracket_color_size: usize = 5; // TODO
-    let mut buf_len: usize = 0;
-    let mut pos: usize = 0;
+    let bracket_color_size: usize = 5; // TODO
+    let pos;
 
     let mut level_pos: HashMap<usize, usize> = HashMap::new();
     let mut last_of_level: HashMap<usize, usize> = HashMap::new();
