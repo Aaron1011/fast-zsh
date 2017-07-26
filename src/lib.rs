@@ -1,5 +1,8 @@
 #![feature(const_fn)]
 
+#![cfg_attr(feature="clippy", feature(plugin))]
+#![cfg_attr(feature="clippy", plugin(clippy))]
+
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
@@ -39,8 +42,8 @@ pub static mut bintab: BinWrapper<'static> = BinWrapper(&mut [builtin {
         flags: 0
     },
     handlerfunc: Some(bin_fastbrackets),
-    minargs: 2,
-    maxargs: 3,
+    minargs: 3,
+    maxargs: 4,
     funcid: 0,
     optstr: null_mut(),
     defopts: null_mut()
@@ -121,18 +124,24 @@ pub extern fn bin_fastbrackets(name: *mut c_char, mut raw_args: *mut *mut c_char
         }
     }
 
-    let cursor = if args.len() == 2 {
-        0
-    } else {
-        match args[2].parse::<usize>() {
-            Ok(s) => s,
-            Err(e) => {
-                unsafe { zwarnnam(name, CString::new(format!("Invalid cursor argument: {:?}", e)).unwrap().into_raw()) } ;
-                return 1
-            }
+    let cursor = match args[2].parse::<usize>() {
+        Ok(s) => s,
+        Err(e) => {
+            unsafe { zwarnnam(name, CString::new(format!("Invalid cursor argument: {:?} {:?}", args[2], e)).unwrap().into_raw()) } ;
+            return 1
         }
     };
-    brackets_paint(&args[0], &args[1], cursor);
+
+    let bracket_color_size = match args[0].parse::<usize>() {
+        Ok(s) => s,
+        Err(e) => {
+            unsafe { zwarnnam(name, CString::new(format!("Bad bracket color size (should be impossible): {:?} {:?}", args[0], e)).unwrap().into_raw()) } ;
+            return 1
+
+        }
+    };
+
+    brackets_paint(bracket_color_size, &args[1], cursor, &args.get(3).unwrap_or(&"".to_owned()));
 
     0
 }
@@ -144,7 +153,12 @@ mod tests {
 
     #[test]
     fn simple_bracket() {
-        brackets_paint("[]", "lol", 0);
+        brackets_paint(8, "[]", "lol", 0);
+    }
+
+    #[test]
+    fn cursor_bracket() {
+        brackets_paint(3, ": ((( )))", "no", 2);
     }
 
     /*#[test]

@@ -4,10 +4,10 @@ use linkroot;
 use std::os::raw::{c_char, c_void};
 use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode};
 
-pub fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
-    let mut style: String;
+pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widget: &str) {
+    let mut style: String = "".to_owned();
     let mut level: usize = 0;
-    let bracket_color_size: usize = 5; // TODO
+    //let bracket_color_size: usize = 5; // TODO
     let pos;
 
     let mut level_pos: HashMap<usize, usize> = HashMap::new();
@@ -25,12 +25,9 @@ pub fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
                 last_of_level.insert(level, i);
             },
             ')' | ']' | '}' => {
-                let matching_pos = match last_of_level.get(&level) {
-                    Some(val) => *val,
-                    None => continue
-                };
+                let matching_pos = *last_of_level.get(&level).unwrap_or(&0);
                 level_pos.insert(i, level);
-                level -= 1;
+                level = level.saturating_sub(1);
 
                 if brackets_match(*chars.get(matching_pos).unwrap_or(&' '), chars[i]) {
                     matching.insert(matching_pos, i);
@@ -42,6 +39,7 @@ pub fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
                     if val.1 != chr {
                         continue;
                     }
+                    break;
                 }
                 //it = Box::new(it.skip(chars[(pos+1)..].iter().position(|c| c == chr).unwrap_or(chars.len() + 1)));
             },
@@ -51,7 +49,9 @@ pub fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
 
     for pos in level_pos.keys() {
        if matching.contains_key(pos) {
-           style = format!("bracket-level-{}", ((level_pos[pos] - 1) % bracket_color_size) + 1);
+           if bracket_color_size != 0 {
+               style = format!("bracket-level-{}", (level_pos[pos] - 1) % bracket_color_size + 1);
+           }
        } else {
            style = "bracket-error".to_owned();
        }
@@ -60,10 +60,10 @@ pub fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
     }
 
     if widget != "zle-line-finish" {
-        pos = cursor + 1;
+        pos = cursor; // cursor is already zero-based
         if level_pos.get(&pos).is_some() && matching.get(&pos).is_some() {
             let other_pos = matching[&pos];
-            do_highlight(other_pos, other_pos + 1, "standout");
+            do_highlight(other_pos, other_pos + 1, "cursor-matchingbracket");
         }
     }
 
