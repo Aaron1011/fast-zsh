@@ -3,14 +3,14 @@
 use std::collections::HashMap;
 use std::ffi::CString;
 use linkroot;
-use std::os::raw::c_char;
-use {shfunc, getshfunc, doshfunc, Shfunc};
+use std::os::raw::{c_char, c_void};
+use {shfunc, getshfunc, doshfunc, Shfunc, newlinklist, insertlinknode, linknode};
 
-fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
-    let mut style: &str;
+pub fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
+    let mut style: String;
     let mut level: usize = 0;
     let mut matching_pos: usize = 0;
-    let mut bracket_color_size: usize = 0;
+    let mut bracket_color_size: usize = 5; // TODO
     let mut buf_len: usize = 0;
     let mut pos: usize = 0;
 
@@ -29,7 +29,10 @@ fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
                 last_of_level.insert(level, i);
             },
             ')' | ']' | '}' => {
-                matching_pos = *last_of_level.get(&level).unwrap();
+                let matching_pos = match last_of_level.get(&level) {
+                    Some(val) => *val,
+                    None => continue
+                };
                 level_pos.insert(i, level);
                 level -= 1;
 
@@ -50,12 +53,13 @@ fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
         }
     }
 
-    for pos in level_pos.values() {
+    for pos in level_pos.keys() {
        if matching.contains_key(pos) {
-           style = "fg=yellow"; // TODO
+           style = format!("bracket-level-{}", ((level_pos[pos] - 1) % bracket_color_size) + 1);
        } else {
-           style = "fg=red";
+           style = "bracket-error".to_owned();
        }
+       do_highlight(*pos, *pos + 1, &style);
        
     }
 
@@ -63,7 +67,7 @@ fn brackets_paint(buf: &str, widget: &str, cursor: usize) {
         pos = cursor + 1;
         if level_pos.get(&pos).is_some() && matching.get(&pos).is_some() {
             let other_pos = matching[&pos];
-            do_highlight(other_pos - 1, other_pos, "standout");
+            do_highlight(other_pos, other_pos + 1, "standout");
         }
     }
 
@@ -78,10 +82,27 @@ fn brackets_match(first: char, second: char) -> bool {
     }
 }
 
+#[cfg(not(test))]
 fn do_highlight(start: usize, end: usize, style: &str) {
-    let func_name = CString::new("_zsh_highlight_add_highlight").unwrap();
     unsafe {
-        let func: Shfunc = getshfunc(func_name.as_ptr() as *mut c_char);
-        doshfunc(func, 0 as *mut linkroot, 1);
+        let func_name = str_to_ptr("_zsh_highlight_add_highlight");
+        let func = getshfunc(func_name as *mut c_char);
+
+        let list = newlinklist();
+        insertlinknode(list, (*list).list.as_ref().last as *const linknode as *mut linknode, func_name);
+        insertlinknode(list, (*list).list.as_ref().last as *const linknode as *mut linknode, str_to_ptr(&start.to_string()));
+        insertlinknode(list, (*list).list.as_ref().last as *const linknode as *mut linknode, str_to_ptr(&end.to_string()));
+        insertlinknode(list, (*list).list.as_ref().last as *const linknode as *mut linknode, str_to_ptr(style));
+
+        doshfunc(func, list as *mut linkroot, 1);
     }
+}
+
+#[cfg(test)]
+fn do_highlight(start: usize, end: usize, style: &str) {
+}
+
+
+fn str_to_ptr(s: &str) -> *mut c_void {
+    CString::new(s.to_string()).unwrap().into_raw() as *mut c_void
 }

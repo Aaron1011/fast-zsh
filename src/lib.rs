@@ -10,12 +10,15 @@ include!("bindings.rs");
 #[macro_use]
 extern crate lazy_static;
 
+mod brackets;
+
 use std::ptr::{null, null_mut};
 use std::os::raw::{c_int, c_char};
-use std::ffi::CString;
+use std::ffi::{CString, CStr};
 use std::mem::transmute;
+use std::slice;
 
-mod brackets;
+use brackets::brackets_paint;
 
 // https://github.com/rust-lang/rfcs/issues/400#issuecomment-274140470
 macro_rules! cstr {
@@ -38,8 +41,8 @@ pub static mut bintab: BinWrapper<'static> = BinWrapper(&mut [builtin {
         flags: 0
     },
     handlerfunc: Some(bin_fastbrackets),
-    minargs: 0,
-    maxargs: -1,
+    minargs: 2,
+    maxargs: 3,
     funcid: 0,
     optstr: null_mut(),
     defopts: null_mut()
@@ -105,14 +108,47 @@ pub extern fn enables_(m: Module, enables: *mut *mut c_int) -> c_int {
 }
 
 #[no_mangle]
-pub extern fn bin_fastbrackets(name: *mut c_char, args: *mut *mut c_char, options: Options, func: c_int) -> c_int {
-    println!("Called!");
+pub extern fn bin_fastbrackets(name: *mut c_char, mut raw_args: *mut *mut c_char, options: Options, func: c_int) -> c_int {
+    let mut args: Vec<String> = Vec::new();
+
+    unsafe {
+        while *raw_args != null_mut() {
+            args.push(CStr::from_ptr(*raw_args as *const c_char).to_str().unwrap().to_owned());
+            raw_args = raw_args.offset(1);
+        }
+    }
+
+    let cursor = 0;
+    if args.len() == 2 {
+        let cursor = 0;
+    } else {
+        let cursor = match args[2].parse::<usize>() {
+            Ok(s) => s,
+            Err(e) => {
+                unsafe { zwarnnam(name, CString::new(format!("Invalid cursor argument: {:?}", e)).unwrap().into_raw()) } ;
+                return 1
+            }
+        };
+    }
+    brackets_paint(&args[0], &args[1], cursor);
+
     0
 }
 
 #[cfg(test)]
 mod tests {
+    use brackets::brackets_paint;
+    use std::str;
+
     #[test]
-    fn it_works() {
+    fn simple_bracket() {
+        brackets_paint("[]", "lol", 0);
     }
+
+    /*#[test]
+    fn large_buffer() {
+        let data = &[b'a'; 30_000];
+        let buf = unsafe { str::from_utf8_unchecked(data) };
+        brackets_paint(&buf, "hi", 0);
+    }*/
 }
