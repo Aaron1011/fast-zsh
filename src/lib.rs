@@ -153,12 +153,12 @@ mod tests {
 
     #[test]
     fn simple_bracket() {
-        brackets_paint(8, "[]", "lol", 0);
+        brackets_paint(8, "[]", 0, "lol");
     }
 
     #[test]
     fn cursor_bracket() {
-        brackets_paint(3, ": ((( )))", "no", 2);
+        brackets_paint(3, ": ((( )))", 2, "no");
     }
 
     /*#[test]
