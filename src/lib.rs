@@ -172,10 +172,10 @@ mod tests {
         brackets_paint(3, ",  []())sdfs$ ,,sdfsdf -.", 0, "");
     }
 
-    /*#[test]
+    #[test]
     fn large_buffer() {
         let data = &[b'a'; 30_000];
         let buf = unsafe { str::from_utf8_unchecked(data) };
-        brackets_paint(&buf, "hi", 0);
-    }*/
+        brackets_paint(3, &buf, 0, "");
+    }
 }

@@ -7,7 +7,6 @@ use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode};
 pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widget: &str) {
     let mut style: String = "".to_owned();
     let mut level: isize = 0;
-    let pos;
 
     let mut level_pos: HashMap<usize, isize> = HashMap::new();
     let mut last_of_level: HashMap<isize, usize> = HashMap::new();
@@ -58,7 +57,7 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
     }
 
     if widget != "zle-line-finish" {
-        pos = cursor; // cursor is already zero-based
+        let pos = cursor; // cursor is already zero-based
         if level_pos.get(&pos).is_some() && matching.get(&pos).is_some() {
             let other_pos = matching[&pos];
             do_highlight(other_pos, other_pos + 1, "cursor-matchingbracket");
