@@ -41,7 +41,6 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
                     }
                     break;
                 }
-                //it = Box::new(it.skip(chars[(pos+1)..].iter().position(|c| c == chr).unwrap_or(chars.len() + 1)));
             },
             _ => continue
         }

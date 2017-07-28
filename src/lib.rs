@@ -139,11 +139,8 @@ pub extern fn bin_fastbrackets(name: *mut c_char, raw_args: *mut *mut c_char, op
         }
     };
 
-    let widget = args[3];
-
-
-
-    let buffer = &args.get(3).unwrap();
+    let widget = args[2];
+    let buffer = args[3];
 
     brackets_paint(bracket_color_size, buffer, cursor, widget);
 
