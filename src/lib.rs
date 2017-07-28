@@ -120,15 +120,7 @@ pub extern fn bin_fastbrackets(name: *mut c_char, raw_args: *mut *mut c_char, op
         args_str = CStr::from_ptr(*raw_args as *const c_char).to_str().unwrap().to_owned();
     }
 
-    let args = args_str.split(",").collect::<Vec<_>>();
-
-    let cursor = match args[2].parse::<usize>() {
-        Ok(s) => s,
-        Err(e) => {
-            unsafe { zwarnnam(name, CString::new(format!("Invalid cursor argument: {:?} {:?}", args[2], e)).unwrap().into_raw()) } ;
-            return 1
-        }
-    };
+    let args = args_str.splitn(4, ",").collect::<Vec<_>>();
 
     let bracket_color_size = match args[0].parse::<usize>() {
         Ok(s) => s,
@@ -139,7 +131,21 @@ pub extern fn bin_fastbrackets(name: *mut c_char, raw_args: *mut *mut c_char, op
         }
     };
 
-    brackets_paint(bracket_color_size, &args[1], cursor, &args.get(3).unwrap_or(&""));
+    let cursor = match args[1].parse::<usize>() {
+        Ok(s) => s,
+        Err(e) => {
+            unsafe { zwarnnam(name, CString::new(format!("Invalid cursor argument: {:?} {:?}", args[2], e)).unwrap().into_raw()) } ;
+            return 1
+        }
+    };
+
+    let widget = args[3];
+
+
+
+    let buffer = &args.get(3).unwrap();
+
+    brackets_paint(bracket_color_size, buffer, cursor, widget);
 
     0
 }
@@ -162,6 +168,11 @@ mod tests {
     #[test]
     fn unmatched_bracket() {
         brackets_paint(3, "[]]", 0, "");
+    }
+
+    #[test]
+    fn crazy_buffer() {
+        brackets_paint(3, ",  []())sdfs$ ,,sdfsdf -.", 0, "");
     }
 
     /*#[test]
