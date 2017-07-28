@@ -18,6 +18,7 @@ mod brackets;
 use std::ptr::null_mut;
 use std::os::raw::{c_int, c_char};
 use std::ffi::{CString, CStr};
+use std::error::Error;
 
 use brackets::brackets_paint;
 
@@ -33,6 +34,51 @@ unsafe impl<'a> Sync for BinWrapper<'a> { }
 
 pub struct FeaturesWrapper(features);
 unsafe impl Sync for FeaturesWrapper { }
+
+pub struct Args {
+    buf: String,
+    bracket_color_size: usize,
+    cursor: usize,
+    widget: String
+}
+
+pub type ParseArgsError = Box<Error>;
+
+impl Args {
+    pub fn from_raw(raw_args: *mut *mut c_char) -> Result<Args, ParseArgsError> {
+        let args_str;
+        unsafe {
+            args_str = CStr::from_ptr(*raw_args as *const c_char).to_str().unwrap().to_owned();
+        }
+
+        let args = args_str.splitn(4, ",").collect::<Vec<_>>();
+
+        let bracket_color_size = match args[0].parse::<usize>() {
+            Ok(s) => s,
+            Err(e) => {
+                return Err(Box::new(e))
+
+            }
+        };
+
+        let cursor = match args[1].parse::<usize>() {
+            Ok(s) => s,
+            Err(e) => {
+                return Err(Box::new(e))
+            }
+        };
+
+        let widget = args[2].to_string();
+        let buffer = args[3].to_string();
+
+        Ok(Args {
+            buf: buffer.to_owned(),
+            bracket_color_size: bracket_color_size,
+            cursor: cursor,
+            widget: widget
+        })
+    }
+}
 
 
 pub static mut bintab: BinWrapper<'static> = BinWrapper(&mut [builtin {
@@ -115,41 +161,18 @@ pub extern fn enables_(m: Module, enables: *mut *mut c_int) -> c_int {
 #[no_mangle]
 #[allow(unused_variables)]
 pub extern fn bin_fastbrackets(name: *mut c_char, raw_args: *mut *mut c_char, options: Options, func: c_int) -> c_int {
-    let args_str;
-    unsafe {
-        args_str = CStr::from_ptr(*raw_args as *const c_char).to_str().unwrap().to_owned();
-    }
-
-    let args = args_str.splitn(4, ",").collect::<Vec<_>>();
-
-    let bracket_color_size = match args[0].parse::<usize>() {
-        Ok(s) => s,
-        Err(e) => {
-            unsafe { zwarnnam(name, CString::new(format!("Bad bracket color size (should be impossible): {:?} {:?}", args[0], e)).unwrap().into_raw()) } ;
-            return 1
-
-        }
-    };
-
-    let cursor = match args[1].parse::<usize>() {
-        Ok(s) => s,
-        Err(e) => {
-            unsafe { zwarnnam(name, CString::new(format!("Invalid cursor argument: {:?} {:?}", args[2], e)).unwrap().into_raw()) } ;
-            return 1
-        }
-    };
-
-    let widget = args[2];
-    let buffer = args[3];
-
-    brackets_paint(bracket_color_size, buffer, cursor, widget);
+    let args = Args::from_raw(raw_args).unwrap();
+//unsafe { zwarnnam(name, CString::new(format!("Bad bracket color size (should be impossible): {:?} {:?}", args[0], e)).unwrap().into_raw()) } ;
+//unsafe { zwarnnam(name, CString::new(format!("Invalid cursor argument: {:?} {:?}", args[2], e)).unwrap().into_raw()) } ;
+    brackets_paint(args.bracket_color_size, &args.buf, args.cursor, &args.widget);
 
     0
 }
 
+
 #[cfg(test)]
 mod tests {
-    use brackets::brackets_paint;
+    use super::*;
     use std::str;
 
     #[test]
@@ -177,5 +200,13 @@ mod tests {
         let data = &[b'a'; 30_000];
         let buf = unsafe { str::from_utf8_unchecked(data) };
         brackets_paint(3, &buf, 0, "");
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_invalid_args() {
+        let args = "a,b";
+        let c_args = CString::new(args).unwrap().into_raw() as *mut c_char;
+        let parsed_args = Args::from_raw((&c_args) as *const *mut c_char as *mut *mut c_char).unwrap();
     }
 }
