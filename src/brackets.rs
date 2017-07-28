@@ -7,7 +7,6 @@ use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode};
 pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widget: &str) {
     let mut style: String = "".to_owned();
     let mut level: isize = 0;
-    //let bracket_color_size: usize = 5; // TODO
     let pos;
 
     let mut level_pos: HashMap<usize, isize> = HashMap::new();
