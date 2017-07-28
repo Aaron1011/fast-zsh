@@ -15,7 +15,7 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
 
     let chars: Vec<char> = buf.chars().collect();
 
-    let mut it: Box<Iterator<Item=(usize, &char)>> = Box::new(chars.iter().enumerate());
+    let mut it = chars.iter().enumerate();
     while let Some((i, chr)) = it.next() {
         match *chr {
             '(' | '[' | '{' => {
