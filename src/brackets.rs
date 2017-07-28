@@ -6,12 +6,12 @@ use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode};
 
 pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widget: &str) {
     let mut style: String = "".to_owned();
-    let mut level: usize = 0;
+    let mut level: isize = 0;
     //let bracket_color_size: usize = 5; // TODO
     let pos;
 
-    let mut level_pos: HashMap<usize, usize> = HashMap::new();
-    let mut last_of_level: HashMap<usize, usize> = HashMap::new();
+    let mut level_pos: HashMap<usize, isize> = HashMap::new();
+    let mut last_of_level: HashMap<isize, usize> = HashMap::new();
     let mut matching: HashMap<usize, usize> = HashMap::new();
 
     let chars: Vec<char> = buf.chars().collect();
@@ -50,7 +50,7 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
     for pos in level_pos.keys() {
        if matching.contains_key(pos) {
            if bracket_color_size != 0 {
-               style = format!("bracket-level-{}", (level_pos[pos] - 1) % bracket_color_size + 1);
+               style = format!("bracket-level-{}", (level_pos[pos] - 1) % bracket_color_size as isize + 1);
            }
        } else {
            style = "bracket-error".to_owned();

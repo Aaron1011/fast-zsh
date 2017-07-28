@@ -7,7 +7,8 @@
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+//include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
+include!("bindings.rs");
 
 #[macro_use]
 extern crate lazy_static;
@@ -41,8 +42,8 @@ pub static mut bintab: BinWrapper<'static> = BinWrapper(&mut [builtin {
         flags: 0
     },
     handlerfunc: Some(bin_fastbrackets),
-    minargs: 3,
-    maxargs: 4,
+    minargs: 1,
+    maxargs: 1,
     funcid: 0,
     optstr: null_mut(),
     defopts: null_mut()
@@ -113,15 +114,13 @@ pub extern fn enables_(m: Module, enables: *mut *mut c_int) -> c_int {
 
 #[no_mangle]
 #[allow(unused_variables)]
-pub extern fn bin_fastbrackets(name: *mut c_char, mut raw_args: *mut *mut c_char, options: Options, func: c_int) -> c_int {
-    let mut args: Vec<String> = Vec::new();
-
+pub extern fn bin_fastbrackets(name: *mut c_char, raw_args: *mut *mut c_char, options: Options, func: c_int) -> c_int {
+    let args_str;
     unsafe {
-        while *raw_args != null_mut() {
-            args.push(CStr::from_ptr(*raw_args as *const c_char).to_str().unwrap().to_owned());
-            raw_args = raw_args.offset(1);
-        }
+        args_str = CStr::from_ptr(*raw_args as *const c_char).to_str().unwrap().to_owned();
     }
+
+    let args = args_str.split(",").collect::<Vec<_>>();
 
     let cursor = match args[2].parse::<usize>() {
         Ok(s) => s,
@@ -140,7 +139,7 @@ pub extern fn bin_fastbrackets(name: *mut c_char, mut raw_args: *mut *mut c_char
         }
     };
 
-    brackets_paint(bracket_color_size, &args[1], cursor, &args.get(3).unwrap_or(&"".to_owned()));
+    brackets_paint(bracket_color_size, &args[1], cursor, &args.get(3).unwrap_or(&""));
 
     0
 }
@@ -158,6 +157,11 @@ mod tests {
     #[test]
     fn cursor_bracket() {
         brackets_paint(3, ": ((( )))", 2, "no");
+    }
+
+    #[test]
+    fn unmatched_bracket() {
+        brackets_paint(3, "[]]", 0, "");
     }
 
     /*#[test]
