@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::ffi::CString;
 use linkroot;
 use std::os::raw::{c_char, c_void};
-use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode};
+use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode, LinkList};
 
 pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widget: &str) {
     let mut style: String = "".to_owned();
@@ -53,7 +53,7 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
            style = "bracket-error".to_owned();
        }
        do_highlight(*pos, *pos + 1, &style);
-       
+
     }
 
     if widget != "zle-line-finish" {
@@ -82,13 +82,17 @@ fn do_highlight(start: usize, end: usize, style: &str) {
         let func = getshfunc(func_name as *mut c_char);
 
         let list = newlinklist();
-        insertlinknode(list, (*list).list.as_ref().last as *const linknode as *mut linknode, func_name);
-        insertlinknode(list, (*list).list.as_ref().last as *const linknode as *mut linknode, str_to_ptr(&start.to_string()));
-        insertlinknode(list, (*list).list.as_ref().last as *const linknode as *mut linknode, str_to_ptr(&end.to_string()));
-        insertlinknode(list, (*list).list.as_ref().last as *const linknode as *mut linknode, str_to_ptr(style));
+        insertlinknode(list, latest_node(list), func_name);
+        insertlinknode(list, latest_node(list), str_to_ptr(&start.to_string()));
+        insertlinknode(list, latest_node(list), str_to_ptr(&end.to_string()));
+        insertlinknode(list, latest_node(list), str_to_ptr(style));
 
         doshfunc(func, list as *mut linkroot, 1);
     }
+}
+
+fn latest_node(list: LinkList) -> *mut linknode {
+    unsafe { (*list).list }.last as *const linknode as *mut linknode
 }
 
 #[cfg(test)]
