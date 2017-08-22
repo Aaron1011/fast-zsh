@@ -3,7 +3,10 @@ use std::hash::{BuildHasherDefault, Hasher};
 use std::ffi::CString;
 use linkroot;
 use std::os::raw::{c_char, c_void};
+use std::cell::RefCell;
 use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode, LinkList};
+use std::mem;
+use std::ops::DerefMut;
 
 /*struct IntHasher;
 
@@ -21,41 +24,52 @@ impl Hasher for IntHasher {
 }*/
 
 pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widget: &str) {
-    let mut style: String = "".to_owned();
-    let mut level: isize = 0;
+    let mut level: usize = 0;
 
     let mut cursor_level = false;
 
-    let mut level_pos: Vec<(usize, isize)> = Vec::new();
-    //let mut level_pos: HashMap<usize, isize> = HashMap::new();
+    let mut level_pos: Vec<(usize, usize)> = Vec::new();
 
-    let mut last_of_level: HashMap<isize, usize> = HashMap::new();
+    let mut last_of_level: Vec<usize> = Vec::new();
+    //let mut matching: HashMap<usize, usize> = HashMap::new();
 
-    let mut matching: HashMap<usize, usize> = HashMap::new();
-
-    let chars: Vec<char> = buf.chars().collect();
+    let chars: Vec<(char, RefCell<Option<usize>>)> = buf.chars().map(|c| (c, RefCell::new(None))).collect();
 
     let mut it = chars.iter().enumerate();
-    while let Some((i, chr)) = it.next() {
+    while let Some((i, &(ref chr, ref match_pos))) = it.next() {
         match *chr {
             '(' | '[' | '{' => {
                 level += 1;
                 level_pos.push((i, level));
-                last_of_level.insert(level, i);
+
+                if last_of_level.get(level - 1).is_some() {
+                    *last_of_level.get_mut(level - 1).unwrap() = i;
+                } else {
+                    last_of_level.push(i);
+                }
+
+                //last_of_level.get(level).unwrap_or_else(|| last_of_level.push(i); last_of_level.get(i));
+                //last_of_level.push(i);
             },
             ')' | ']' | '}' => {
-                let matching_pos = *last_of_level.get(&level).unwrap_or(&0);
+                let matching_pos: Option<&usize> = last_of_level.get(level - 1);
                 level_pos.push((i, level));
                 level = level.saturating_sub(1);
 
-                if brackets_match(*chars.get(matching_pos).unwrap_or(&' '), chars[i]) {
-                    matching.insert(matching_pos, i);
-                    matching.insert(i, matching_pos);
+                if brackets_match(matching_pos.and_then(|p| chars.get(*p).map(|s| s.0)).unwrap_or(' '), chars[i].0) {
+                    let matching_pos = *matching_pos.unwrap();
+                    //println!("Matching: {} {}", i, matching_pos);
+                    //
+                    mem::replace(&mut *match_pos.borrow_mut(), Some(matching_pos));
+                    mem::replace(&mut *(chars.get(matching_pos).unwrap().1.borrow_mut()), Some(i));
+
+                    //matching.insert(matching_pos, i);
+                    //matching.insert(i, matching_pos);
                 }
             },
             '\"' | '\'' => {
-                while let Some(val) = it.next() {
-                    if val.1 != chr {
+                while let Some((_, &(ref character, _))) = it.next() {
+                    if *character != *chr {
                         continue;
                     }
                     break;
@@ -66,25 +80,25 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
     }
 
     for &(pos, level) in level_pos.iter() {
-       if matching.contains_key(&pos) {
-           if bracket_color_size != 0 {
-               style = format!("bracket-level-{}", (level - 1) % bracket_color_size as isize + 1);
-           }
-       } else {
-           style = "bracket-error".to_owned();
-       }
-       if cursor == pos {
-           cursor_level = true;
-       }
-       do_highlight(pos, pos + 1, &style);
-
+        if chars[pos].1.borrow().is_some() {
+            if bracket_color_size != 0 {
+                do_highlight(pos, pos + 1, &format!("bracket-level-{}", (level - 1) % bracket_color_size + 1));
+            } else {
+                do_highlight(pos, pos + 1, &"bracket-error");
+            }
+            if cursor == pos {
+                cursor_level = true;
+            }
+        }
     }
 
     if widget != "zle-line-finish" {
         let pos = cursor; // cursor is already zero-based
-        if cursor_level && matching.get(&pos).is_some() {
-            let other_pos = matching[&pos];
-            do_highlight(other_pos, other_pos + 1, "cursor-matchingbracket");
+        if cursor_level {
+            let other_pos = chars[pos].1.borrow();
+            if let Some(real_pos) = *other_pos {
+                do_highlight(real_pos, real_pos + 1, "cursor-matchingbracket");
+            }
         }
     }
 
