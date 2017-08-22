@@ -13,3 +13,7 @@ bindgen = "0.26.3"
 [lib]
 name = "fastbrackets"
 crate-type = ["dylib"]
+
+[profile.release]
+debug = true
+
