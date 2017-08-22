@@ -114,7 +114,6 @@ lazy_static! {
 #[allow(unused_variables)]
 pub extern fn setup_(m: Module) -> c_int {
     println!("Setup!");
-    //unsafe { bintab.0[0].node.nam = CString::new("Hi").unwrap().into_raw() }
     0
 }
 
