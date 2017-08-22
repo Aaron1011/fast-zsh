@@ -1,15 +1,36 @@
 use std::collections::HashMap;
+use std::hash::{BuildHasherDefault, Hasher};
 use std::ffi::CString;
 use linkroot;
 use std::os::raw::{c_char, c_void};
 use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode, LinkList};
 
+/*struct IntHasher;
+
+impl Hasher for IntHasher {
+
+    fn write(&mut self, bytes: &[u8]) {
+		assert!(bytes.len(), mem::size_of::<usize>());
+
+    }
+
+    fn finish(&self) -> u64 {
+        // Your hashing algorithm goes here!
+        unimplemented!()
+    }
+}*/
+
 pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widget: &str) {
     let mut style: String = "".to_owned();
     let mut level: isize = 0;
 
-    let mut level_pos: HashMap<usize, isize> = HashMap::new();
+    let mut cursor_level = false;
+
+    let mut level_pos: Vec<(usize, isize)> = Vec::new();
+    //let mut level_pos: HashMap<usize, isize> = HashMap::new();
+
     let mut last_of_level: HashMap<isize, usize> = HashMap::new();
+
     let mut matching: HashMap<usize, usize> = HashMap::new();
 
     let chars: Vec<char> = buf.chars().collect();
@@ -19,12 +40,12 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
         match *chr {
             '(' | '[' | '{' => {
                 level += 1;
-                level_pos.insert(i, level);
+                level_pos.push((i, level));
                 last_of_level.insert(level, i);
             },
             ')' | ']' | '}' => {
                 let matching_pos = *last_of_level.get(&level).unwrap_or(&0);
-                level_pos.insert(i, level);
+                level_pos.push((i, level));
                 level = level.saturating_sub(1);
 
                 if brackets_match(*chars.get(matching_pos).unwrap_or(&' '), chars[i]) {
@@ -44,21 +65,24 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
         }
     }
 
-    for pos in level_pos.keys() {
-       if matching.contains_key(pos) {
+    for &(pos, level) in level_pos.iter() {
+       if matching.contains_key(&pos) {
            if bracket_color_size != 0 {
-               style = format!("bracket-level-{}", (level_pos[pos] - 1) % bracket_color_size as isize + 1);
+               style = format!("bracket-level-{}", (level - 1) % bracket_color_size as isize + 1);
            }
        } else {
            style = "bracket-error".to_owned();
        }
-       do_highlight(*pos, *pos + 1, &style);
+       if cursor == pos {
+           cursor_level = true;
+       }
+       do_highlight(pos, pos + 1, &style);
 
     }
 
     if widget != "zle-line-finish" {
         let pos = cursor; // cursor is already zero-based
-        if level_pos.get(&pos).is_some() && matching.get(&pos).is_some() {
+        if cursor_level && matching.get(&pos).is_some() {
             let other_pos = matching[&pos];
             do_highlight(other_pos, other_pos + 1, "cursor-matchingbracket");
         }

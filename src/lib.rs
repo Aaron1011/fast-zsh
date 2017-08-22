@@ -1,4 +1,5 @@
 #![feature(const_fn)]
+#![feature(test)]
 
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
@@ -11,7 +12,9 @@ include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 #[macro_use]
 extern crate lazy_static;
+extern crate test;
 
+mod benchmark;
 mod brackets;
 
 use std::ptr::null_mut;
