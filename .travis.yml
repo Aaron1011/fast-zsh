@@ -6,6 +6,6 @@ env:
   - RUST_BACKTRACE=1
 
 rust:
-  - beta
   - nightly
+
 script: cargo test --verbose --jobs 4
