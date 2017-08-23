@@ -30,18 +30,20 @@ fn main() {
 
 fn compile_zsh() {
     let old_dir = env::current_dir().unwrap();
-    env::set_current_dir(old_dir.join("zsh")).unwrap();
+    let zsh_dir = old_dir.join("zsh");
 
-    Command::new("./Util/preconfig")
-        .spawn()
+    env::set_current_dir(zsh_dir.clone()).unwrap();
+
+    Command::new(zsh_dir.join("Util/preconfig"))
+        .status()
         .expect("Failed to run zsh/Util/preconfig");
 
-    Command::new("./configure")
-        .spawn()
+    Command::new(zsh_dir.join("./configure"))
+        .status()
         .expect("Failed to run zsh/configure");
 
     Command::new("make")
-        .spawn()
+        .status()
         .expect("Failed to run make");
 
 
