@@ -1,6 +1,6 @@
 [package]
-name = "zsh"
-version = "0.1.0"
+name = "fast-zsh"
+version = "0.2.0"
 authors = ["Aaron Hill <aa1ronham@gmail.com>"]
 
 [dependencies]

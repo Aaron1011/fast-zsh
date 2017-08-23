@@ -1,7 +1,6 @@
 extern crate bindgen;
 
 use std::path::PathBuf;
-use std::process::Command;
 use std::env;
 
 
