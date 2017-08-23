@@ -1,30 +1,63 @@
-use std::collections::HashMap;
-use std::hash::{BuildHasherDefault, Hasher};
+extern crate test;
+
 use std::ffi::{CString, CStr};
 use linkroot;
 use std::os::raw::{c_char, c_void};
 use std::cell::RefCell;
-use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode, LinkList, getaparam};
+use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode, LinkList, getaparam, setaparam, zalloc, gethparam, gethkparam};
 use std::mem;
-use std::ops::DerefMut;
+use std::iter;
 use std::ptr::null_mut;
 
-/*struct IntHasher;
+struct Highlight {
+    start: usize,
+    end: usize,
+    style: String
+}
 
-impl Hasher for IntHasher {
+fn set_at_pos<T: Default>(vec: &mut Vec<T>, pos: usize, elem: T) {
+    for _ in 0..((pos+1)-vec.len()) {
+        vec.push(Default::default());
+    }
+    vec[pos] = elem;
+}
 
-    fn write(&mut self, bytes: &[u8]) {
-		assert!(bytes.len(), mem::size_of::<usize>());
+#[cfg(test)]
+fn get_styles() -> impl Iterator<Item=(String,String)> {
+    iter::empty()
+}
 
+#[cfg(not(test))]
+fn get_styles() -> impl Iterator<Item=(String, String)> {
+    let styles_keys;
+    let styles_vals;
+    unsafe {
+        styles_keys = c_array_to_vec(gethkparam(str_to_ptr("ZSH_HIGHLIGHT_STYLES") as *mut c_char));
+        styles_vals = c_array_to_vec(gethparam(str_to_ptr("ZSH_HIGHLIGHT_STYLES") as *mut c_char));
     }
 
-    fn finish(&self) -> u64 {
-        // Your hashing algorithm goes here!
-        unimplemented!()
-    }
-}*/
+    styles_keys.iter().zip(styles_vals())
+}
 
 pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widget: &str) {
+
+    let mut bracket_error = "".to_owned();
+    let mut cursor_matching_bracket = "".to_owned();
+    let mut bracket_level: Vec<String> = Vec::new();
+
+    for (key, val) in get_styles() {
+        match key.as_ref() {
+            "bracket-error" => bracket_error = val,
+            "cursor-matchingbracket" => cursor_matching_bracket = val,
+            _ => {
+                if key.starts_with("bracket-level-") {
+                    let num = &key["bracket-level-".len()..];
+                    set_at_pos(&mut bracket_level, num.parse().unwrap(), val);
+                }
+            }
+        }
+    }
+
     let mut level: usize = 0;
 
     // We keep the full usize range of level by tracking when the level goes negative separately
@@ -39,6 +72,8 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
     //let mut matching: HashMap<usize, usize> = HashMap::new();
 
     let chars: Vec<(char, RefCell<Option<usize>>)> = buf.chars().map(|c| (c, RefCell::new(None))).collect();
+
+    let mut highlights: Vec<Highlight> = Vec::new();
 
     let mut it = chars.iter().enumerate();
     while let Some((i, &(ref chr, ref match_pos))) = it.next() {
@@ -91,7 +126,6 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
         }
     }
 
-
     for &(pos, level) in level_pos.iter() {
         if cursor == pos {
             cursor_level = true;
@@ -99,10 +133,20 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
 
         if chars[pos].1.borrow().is_some() {
             if bracket_color_size != 0 {
-                do_highlight(pos, pos + 1, &format!("bracket-level-{}", (level - 1) % bracket_color_size + 1));
+                highlights.push(Highlight {
+                    start: pos,
+                    end: pos + 1,
+                    style: bracket_level.get((level - 1) % bracket_color_size + 1).unwrap_or(&"".to_owned()).clone()
+                });
+                //do_highlight(pos, pos + 1, &format!("bracket-level-{}", (level - 1) % bracket_color_size + 1));
             }
         } else {
-            do_highlight(pos, pos + 1, &"bracket-error");
+            highlights.push(Highlight {
+                start: pos,
+                end: pos + 1,
+                style: bracket_error.clone()
+            });
+            //do_highlight(pos, pos + 1, &"bracket-error");
         }
     }
 
@@ -111,9 +155,52 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
         if cursor_level {
             let other_pos = chars[pos].1.borrow();
             if let Some(real_pos) = *other_pos {
-                do_highlight(real_pos, real_pos + 1, "cursor-matchingbracket");
+                highlights.push(Highlight {
+                    start: real_pos,
+                    end: real_pos + 1,
+                    style: cursor_matching_bracket.clone()
+                });
+                //do_highlight(real_pos, real_pos + 1, "cursor-matchingbracket");
             }
         }
+    }
+
+    add_highlights(highlights);
+
+}
+
+#[cfg(test)]
+fn add_highlights(highlights: Vec<Highlight>) {
+    test::black_box(highlights);
+}
+
+#[cfg(not(test))]
+fn add_highlights(highlights: Vec<Highlight>) {
+    unsafe {
+        let region_highlight_str = str_to_ptr("region_highlight") as *mut c_char;
+
+        let mut param_ptr = getaparam(region_highlight_str);
+        let mut param_len = 0;
+
+        if param_ptr != null_mut() {
+            while *param_ptr != null_mut() {
+                param_len += 1;
+                //zsh_highlights.push(CStr::from_ptr(*param_ptr as *const c_char).to_owned().into_string().unwrap());
+                param_ptr = param_ptr.offset(1)
+            }
+        }
+
+        let alloc_len = param_len + highlights.len();
+        let alloc_size = alloc_len * mem::size_of::<*const c_char>() + 1; // store NULL at the end
+
+        let buf: *mut *mut c_char = zalloc(alloc_size) as *mut *mut c_char;
+        *buf.offset(alloc_len as isize) = null_mut() as *mut c_char;
+        for (i, highlight) in highlights.iter().enumerate() {
+            let highlight_str =format!("{} {} {}", highlight.start, highlight.end, highlight.style); 
+            *buf.offset(i as isize) = str_to_ptr(&highlight_str) as *mut c_char;
+        }
+
+        setaparam(region_highlight_str, buf);
     }
 
 }
@@ -151,6 +238,17 @@ fn do_highlight(start: usize, end: usize, style: &str) {
         }*/
         //println!("Result: {:?}", highlights);
     }
+}
+
+unsafe fn c_array_to_vec(mut array: *mut *mut c_char) -> Vec<String> {
+    let mut vec: Vec<String> = Vec::new();
+    if array != null_mut() {
+        while *array != null_mut() {
+            vec.push(CStr::from_ptr(*array as *const c_char).to_owned().into_string().unwrap());
+            array = array.offset(1)
+        }
+    }
+    vec
 }
 
 fn latest_node(list: LinkList) -> *mut linknode {
