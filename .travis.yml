@@ -1,0 +1,8 @@
+sudo: false
+language: rust
+cache: cargo
+
+rust:
+  - beta
+  - nightly
+script: cargo test --verbose --jobs 4
