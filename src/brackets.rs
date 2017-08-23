@@ -1,12 +1,13 @@
 use std::collections::HashMap;
 use std::hash::{BuildHasherDefault, Hasher};
-use std::ffi::CString;
+use std::ffi::{CString, CStr};
 use linkroot;
 use std::os::raw::{c_char, c_void};
 use std::cell::RefCell;
-use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode, LinkList};
+use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode, LinkList, getaparam};
 use std::mem;
 use std::ops::DerefMut;
+use std::ptr::null_mut;
 
 /*struct IntHasher;
 
@@ -26,10 +27,14 @@ impl Hasher for IntHasher {
 pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widget: &str) {
     let mut level: usize = 0;
 
+    // We keep the full usize range of level by tracking when the level goes negative separately
+    // Due to the way the highlighting logic works, a bracket match can never occur on a negative
+    // level. This allows us to skip tracking information for negative levels, which would make it
+    // difficult to use a Vec
+    let mut level_neg: usize = 0;
+
     let mut cursor_level = false;
-
     let mut level_pos: Vec<(usize, usize)> = Vec::new();
-
     let mut last_of_level: Vec<usize> = Vec::new();
     //let mut matching: HashMap<usize, usize> = HashMap::new();
 
@@ -39,29 +44,36 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
     while let Some((i, &(ref chr, ref match_pos))) = it.next() {
         match *chr {
             '(' | '[' | '{' => {
-                level += 1;
-                level_pos.push((i, level));
-
-                if last_of_level.get(level - 1).is_some() {
-                    *last_of_level.get_mut(level - 1).unwrap() = i;
+                if level_neg == 0 {
+                    level += 1;
+                    if last_of_level.get(level - 1).is_some() {
+                        *last_of_level.get_mut(level - 1).unwrap() = i;
+                    } else {
+                        last_of_level.push(i);
+                    }
                 } else {
-                    last_of_level.push(i);
+                    level_neg -= 1;
                 }
 
-                //last_of_level.get(level).unwrap_or_else(|| last_of_level.push(i); last_of_level.get(i));
-                //last_of_level.push(i);
+                level_pos.push((i, level));
             },
             ')' | ']' | '}' => {
-                let matching_pos: Option<&usize> = last_of_level.get(level - 1);
                 level_pos.push((i, level));
-                level = level.saturating_sub(1);
+
+                if level == 0 {
+                    level_neg += 1;
+                    continue;
+                }
+
+
+                let matching_pos: Option<&usize> = last_of_level.get(level - 1);
+                level -= 1;
 
                 if brackets_match(matching_pos.and_then(|p| chars.get(*p).map(|s| s.0)).unwrap_or(' '), chars[i].0) {
                     let matching_pos = *matching_pos.unwrap();
-                    //println!("Matching: {} {}", i, matching_pos);
                     //
-                    mem::replace(&mut *match_pos.borrow_mut(), Some(matching_pos));
-                    mem::replace(&mut *(chars.get(matching_pos).unwrap().1.borrow_mut()), Some(i));
+                    *match_pos.borrow_mut() = Some(matching_pos);
+                    *(chars.get(matching_pos).unwrap().1.borrow_mut()) = Some(i);
 
                     //matching.insert(matching_pos, i);
                     //matching.insert(i, matching_pos);
@@ -79,16 +91,18 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
         }
     }
 
+
     for &(pos, level) in level_pos.iter() {
+        if cursor == pos {
+            cursor_level = true;
+        }
+
         if chars[pos].1.borrow().is_some() {
             if bracket_color_size != 0 {
                 do_highlight(pos, pos + 1, &format!("bracket-level-{}", (level - 1) % bracket_color_size + 1));
-            } else {
-                do_highlight(pos, pos + 1, &"bracket-error");
             }
-            if cursor == pos {
-                cursor_level = true;
-            }
+        } else {
+            do_highlight(pos, pos + 1, &"bracket-error");
         }
     }
 
@@ -126,6 +140,16 @@ fn do_highlight(start: usize, end: usize, style: &str) {
         insertlinknode(list, latest_node(list), str_to_ptr(style));
 
         doshfunc(func, list as *mut linkroot, 1);
+
+        /*let mut param_ptr = getaparam(str_to_ptr("region_highlight") as *mut c_char);
+        let mut highlights: Vec<String> = Vec::new();
+        if param_ptr != null_mut() {
+            while *param_ptr != null_mut() {
+                highlights.push(CStr::from_ptr(*param_ptr as *const c_char).to_owned().into_string().unwrap());
+                param_ptr = param_ptr.offset(1)
+            }
+        }*/
+        //println!("Result: {:?}", highlights);
     }
 }
 
