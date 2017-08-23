@@ -2,6 +2,9 @@ sudo: false
 language: rust
 cache: cargo
 
+env:
+  - RUST_BACKTRACE=1
+
 rust:
   - beta
   - nightly
