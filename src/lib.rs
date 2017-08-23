@@ -218,4 +218,18 @@ mod tests {
             test::black_box(brackets_paint(0, &brackets_str, 0, ""));
         });
     }
+
+    #[bench]
+    fn even_more(b: &mut Bencher) {
+        use brackets::brackets_paint;
+        use test::Bencher;
+
+        let brackets_str = (0..500000).map(|_| "[[[]]]").collect::<String>();
+        b.iter(|| {
+            // use `test::black_box` to prevent compiler optimizations from disregarding
+            // unused values
+            test::black_box(brackets_paint(0, &brackets_str, 0, ""));
+        });
+    }
+
 }

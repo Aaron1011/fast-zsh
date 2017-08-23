@@ -17,3 +17,5 @@ crate-type = ["dylib"]
 [profile.release]
 debug = true
 
+[profile.bench]
+debug = true
