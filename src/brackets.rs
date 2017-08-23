@@ -1,12 +1,8 @@
 extern crate test;
 
 use std::ffi::{CString, CStr};
-use linkroot;
 use std::os::raw::{c_char, c_void};
 use std::cell::RefCell;
-use {getshfunc, doshfunc, newlinklist, insertlinknode, linknode, LinkList, getaparam, setaparam, zalloc, gethparam, gethkparam};
-use std::mem;
-use std::iter;
 use std::ptr::null_mut;
 
 struct Highlight {
@@ -24,11 +20,14 @@ fn set_at_pos<T: Default>(vec: &mut Vec<T>, pos: usize, elem: T) {
 
 #[cfg(test)]
 fn get_styles() -> impl Iterator<Item=(String,String)> {
-    iter::empty()
+    use std::iter::empty;
+    empty()
 }
 
 #[cfg(not(test))]
 fn get_styles() -> impl Iterator<Item=(String, String)> {
+    use {gethparam, gethkparam};
+
     let styles_keys;
     let styles_vals;
     unsafe {
@@ -36,7 +35,7 @@ fn get_styles() -> impl Iterator<Item=(String, String)> {
         styles_vals = c_array_to_vec(gethparam(str_to_ptr("ZSH_HIGHLIGHT_STYLES") as *mut c_char));
     }
 
-    styles_keys.iter().zip(styles_vals())
+    styles_keys.into_iter().zip(styles_vals)
 }
 
 pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widget: &str) {
@@ -82,7 +81,7 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
                 if level_neg == 0 {
                     level += 1;
                     if last_of_level.get(level - 1).is_some() {
-                        *last_of_level.get_mut(level - 1).unwrap() = i;
+                        last_of_level[level - 1] = i;
                     } else {
                         last_of_level.push(i);
                     }
@@ -108,7 +107,9 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
                     let matching_pos = *matching_pos.unwrap();
                     //
                     *match_pos.borrow_mut() = Some(matching_pos);
-                    *(chars.get(matching_pos).unwrap().1.borrow_mut()) = Some(i);
+
+                    let mut a = chars[matching_pos].1.borrow_mut();
+                    *a = Some(i);
 
                     //matching.insert(matching_pos, i);
                     //matching.insert(i, matching_pos);
@@ -126,7 +127,7 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
         }
     }
 
-    for &(pos, level) in level_pos.iter() {
+    for &(pos, level) in &level_pos {
         if cursor == pos {
             cursor_level = true;
         }
@@ -138,7 +139,6 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
                     end: pos + 1,
                     style: bracket_level.get((level - 1) % bracket_color_size + 1).unwrap_or(&"".to_owned()).clone()
                 });
-                //do_highlight(pos, pos + 1, &format!("bracket-level-{}", (level - 1) % bracket_color_size + 1));
             }
         } else {
             highlights.push(Highlight {
@@ -146,7 +146,6 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
                 end: pos + 1,
                 style: bracket_error.clone()
             });
-            //do_highlight(pos, pos + 1, &"bracket-error");
         }
     }
 
@@ -160,30 +159,32 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
                     end: real_pos + 1,
                     style: cursor_matching_bracket.clone()
                 });
-                //do_highlight(real_pos, real_pos + 1, "cursor-matchingbracket");
             }
         }
     }
 
-    add_highlights(highlights);
+    add_highlights(&highlights);
 
 }
 
 #[cfg(test)]
-fn add_highlights(highlights: Vec<Highlight>) {
+fn add_highlights(highlights: &[Highlight]) {
     test::black_box(highlights);
 }
 
 #[cfg(not(test))]
-fn add_highlights(highlights: Vec<Highlight>) {
+fn add_highlights(highlights: &[Highlight]) {
+    use {getaparam, setaparam, zalloc};
+    use std::mem;
+
     unsafe {
         let region_highlight_str = str_to_ptr("region_highlight") as *mut c_char;
 
         let mut param_ptr = getaparam(region_highlight_str);
         let mut param_len = 0;
 
-        if param_ptr != null_mut() {
-            while *param_ptr != null_mut() {
+        if !param_ptr.is_null() {
+            while !(*param_ptr).is_null() {
                 param_len += 1;
                 //zsh_highlights.push(CStr::from_ptr(*param_ptr as *const c_char).to_owned().into_string().unwrap());
                 param_ptr = param_ptr.offset(1)
@@ -214,51 +215,16 @@ fn brackets_match(first: char, second: char) -> bool {
     }
 }
 
-#[cfg(not(test))]
-fn do_highlight(start: usize, end: usize, style: &str) {
-    unsafe {
-        let func_name = str_to_ptr("_zsh_highlight_add_highlight");
-        let func = getshfunc(func_name as *mut c_char);
-
-        let list = newlinklist();
-        insertlinknode(list, latest_node(list), func_name);
-        insertlinknode(list, latest_node(list), str_to_ptr(&start.to_string()));
-        insertlinknode(list, latest_node(list), str_to_ptr(&end.to_string()));
-        insertlinknode(list, latest_node(list), str_to_ptr(style));
-
-        doshfunc(func, list as *mut linkroot, 1);
-
-        /*let mut param_ptr = getaparam(str_to_ptr("region_highlight") as *mut c_char);
-        let mut highlights: Vec<String> = Vec::new();
-        if param_ptr != null_mut() {
-            while *param_ptr != null_mut() {
-                highlights.push(CStr::from_ptr(*param_ptr as *const c_char).to_owned().into_string().unwrap());
-                param_ptr = param_ptr.offset(1)
-            }
-        }*/
-        //println!("Result: {:?}", highlights);
-    }
-}
-
 unsafe fn c_array_to_vec(mut array: *mut *mut c_char) -> Vec<String> {
     let mut vec: Vec<String> = Vec::new();
-    if array != null_mut() {
-        while *array != null_mut() {
+    if !array.is_null() {
+        while !(*array).is_null() {
             vec.push(CStr::from_ptr(*array as *const c_char).to_owned().into_string().unwrap());
             array = array.offset(1)
         }
     }
     vec
 }
-
-fn latest_node(list: LinkList) -> *mut linknode {
-    unsafe { (*list).list }.last as *const linknode as *mut linknode
-}
-
-#[cfg(test)]
-fn do_highlight(start: usize, end: usize, style: &str) {
-}
-
 
 fn str_to_ptr(s: &str) -> *mut c_void {
     CString::new(s.to_string()).unwrap().into_raw() as *mut c_void

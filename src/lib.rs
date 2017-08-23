@@ -5,23 +5,21 @@
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 
-#![allow(non_upper_case_globals)]
-#![allow(non_camel_case_types)]
-#![allow(non_snake_case)]
 
-include!(concat!(env!("OUT_DIR"), "/bindings.rs"));
 
 #[macro_use]
 extern crate lazy_static;
 extern crate test;
 
-mod benchmark;
+#[allow(warnings)]
+mod ffi;
 mod brackets;
 
 use std::ptr::null_mut;
 use std::os::raw::{c_int, c_char};
-use std::ffi::{CString, CStr};
+use std::ffi::CStr;
 use std::error::Error;
+use ffi::*;
 
 use brackets::brackets_paint;
 
@@ -48,13 +46,11 @@ pub struct Args {
 pub type ParseArgsError = Box<Error>;
 
 impl Args {
-    pub fn from_raw(raw_args: *mut *mut c_char) -> Result<Args, ParseArgsError> {
+    pub unsafe fn from_raw(raw_args: *mut *mut c_char) -> Result<Args, ParseArgsError> {
         let args_str;
-        unsafe {
-            args_str = CStr::from_ptr(*raw_args as *const c_char).to_str().unwrap().to_owned();
-        }
+        args_str = CStr::from_ptr(*raw_args as *const c_char).to_str().unwrap().to_owned();
 
-        let args = args_str.splitn(4, ",").collect::<Vec<_>>();
+        let args = args_str.splitn(4, ',').collect::<Vec<_>>();
 
         let bracket_color_size = match args[0].parse::<usize>() {
             Ok(s) => s,
@@ -84,7 +80,7 @@ impl Args {
 }
 
 
-pub static mut bintab: BinWrapper<'static> = BinWrapper(&mut [builtin {
+pub static mut BINTAB: BinWrapper<'static> = BinWrapper(&mut [builtin {
     node: hashnode {
         next: null_mut(),
         nam: cstr!("fastbrackets"),
@@ -100,9 +96,9 @@ pub static mut bintab: BinWrapper<'static> = BinWrapper(&mut [builtin {
 
 
 lazy_static! {
-    pub static ref module_features: FeaturesWrapper = FeaturesWrapper(features {
-        bn_list: unsafe { &bintab.0[0] as *const builtin as *mut builtin },
-        bn_size: unsafe { bintab.0.len() as c_int },
+    pub static ref MODULE_FEATURES: FeaturesWrapper = FeaturesWrapper(features {
+        bn_list: unsafe { &BINTAB.0[0] as *const builtin as *mut builtin },
+        bn_size: unsafe { BINTAB.0.len() as c_int },
         cd_list: null_mut(),
         cd_size: 0,
         mf_list: null_mut(),
@@ -142,27 +138,23 @@ pub extern fn finish_(m: Module) -> c_int {
     0
 }
 #[no_mangle]
-pub extern fn features_(m: Module, features: *mut *mut *mut c_char) -> c_int {
+pub unsafe extern fn features_(m: Module, features: *mut *mut *mut c_char) -> c_int {
     println!("Features!");
-    unsafe {
-        *features = featuresarray(m, &module_features.0 as *const features as *mut features);
-    }
+    *features = featuresarray(m, &MODULE_FEATURES.0 as *const features as *mut features);
     0
 }
 
 
 
 #[no_mangle]
-pub extern fn enables_(m: Module, enables: *mut *mut c_int) -> c_int {
+pub unsafe extern fn enables_(m: Module, enables: *mut *mut c_int) -> c_int {
     println!("Enables!");
-    unsafe {
-        return handlefeatures(m, &module_features.0 as *const features as *mut features, enables);
-    }
+    handlefeatures(m, &MODULE_FEATURES.0 as *const features as *mut features, enables)
 }
 
 #[no_mangle]
 #[allow(unused_variables)]
-pub extern fn bin_fastbrackets(name: *mut c_char, raw_args: *mut *mut c_char, options: Options, func: c_int) -> c_int {
+pub unsafe extern fn bin_fastbrackets(name: *mut c_char, raw_args: *mut *mut c_char, options: Options, func: c_int) -> c_int {
     let args = Args::from_raw(raw_args).unwrap();
 //unsafe { zwarnnam(name, CString::new(format!("Bad bracket color size (should be impossible): {:?} {:?}", args[0], e)).unwrap().into_raw()) } ;
 //unsafe { zwarnnam(name, CString::new(format!("Invalid cursor argument: {:?} {:?}", args[2], e)).unwrap().into_raw()) } ;
@@ -176,6 +168,8 @@ pub extern fn bin_fastbrackets(name: *mut c_char, raw_args: *mut *mut c_char, op
 mod tests {
     use super::*;
     use std::str;
+    use std::ffi::CString;
+    use test::Bencher;
 
     #[test]
     fn simple_bracket() {
@@ -209,6 +203,19 @@ mod tests {
     fn parse_invalid_args() {
         let args = "a,b";
         let c_args = CString::new(args).unwrap().into_raw() as *mut c_char;
-        let parsed_args = Args::from_raw((&c_args) as *const *mut c_char as *mut *mut c_char).unwrap();
+        let parsed_args = unsafe { Args::from_raw((&c_args) as *const *mut c_char as *mut *mut c_char).unwrap() };
+    }
+
+    #[bench]
+    fn bench_many_brackets(b: &mut Bencher) {
+        use brackets::brackets_paint;
+        use test::Bencher;
+
+        let brackets_str = (0..5000).map(|_| "[]").collect::<String>();
+        b.iter(|| {
+            // use `test::black_box` to prevent compiler optimizations from disregarding
+            // unused values
+            test::black_box(brackets_paint(0, &brackets_str, 0, ""));
+        });
     }
 }
