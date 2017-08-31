@@ -1,5 +1,5 @@
 [package]
-name = "fast-zsh"
+name = "fast_zsh"
 version = "0.2.0"
 authors = ["Aaron Hill <aa1ronham@gmail.com>"]
 
@@ -10,9 +10,11 @@ clippy = {version = "*", optional = true}
 [build-dependencies]
 bindgen = "0.26.3"
 
+
 [lib]
 name = "fastbrackets"
 crate-type = ["dylib"]
+
 
 [profile.release]
 debug = true

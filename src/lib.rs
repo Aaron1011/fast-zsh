@@ -13,7 +13,7 @@ extern crate test;
 
 #[allow(warnings)]
 mod ffi;
-mod brackets;
+pub mod brackets;
 
 use std::ptr::null_mut;
 use std::os::raw::{c_int, c_char};
