@@ -8,4 +8,4 @@ env:
 rust:
   - nightly
 
-script: cargo test --verbose --jobs 4
+script: make test
