@@ -33,14 +33,18 @@ fn compile_zsh() {
     let old_dir = env::current_dir().unwrap();
     let zsh_dir = old_dir.join("zsh");
 
-    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
-    let zsh_install_dir = out_dir.join("zsh_install");
+    let zsh_install_dir = old_dir.join("run/zsh_install");
 
     fs::create_dir_all(&zsh_install_dir).unwrap();
 
     let zsh_install_str = zsh_install_dir.into_os_string().into_string().unwrap();
 
     env::set_current_dir(zsh_dir.clone()).unwrap();
+
+    run_command(
+            Command::new("make")
+                .args(&["clean", "realclean"]), 
+        "Failed to run make clean realclean");
 
     run_command(&mut Command::new(zsh_dir.join("Util/preconfig")),
         "Failed to run zsh/Util/preconfig");

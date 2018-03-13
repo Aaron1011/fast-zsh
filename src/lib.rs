@@ -1,4 +1,5 @@
 #![feature(const_fn)]
+#![feature(const_ptr_null_mut)]
 #![feature(test)]
 #![feature(conservative_impl_trait)]
 
@@ -30,8 +31,8 @@ macro_rules! cstr {
   );
 }
 
-pub struct BinWrapper<'a>(&'a mut [builtin]);
-unsafe impl<'a> Sync for BinWrapper<'a> { }
+pub struct BinWrapper(Box<[builtin]>);
+unsafe impl Sync for BinWrapper { }
 
 pub struct FeaturesWrapper(features);
 unsafe impl Sync for FeaturesWrapper { }
@@ -80,25 +81,27 @@ impl Args {
 }
 
 
-pub static mut BINTAB: BinWrapper<'static> = BinWrapper(&mut [builtin {
-    node: hashnode {
-        next: null_mut(),
-        nam: cstr!("fastbrackets"),
-        flags: 0
-    },
-    handlerfunc: Some(bin_fastbrackets),
-    minargs: 1,
-    maxargs: 1,
-    funcid: 0,
-    optstr: null_mut(),
-    defopts: null_mut()
-}]);
+lazy_static! {
+    static ref BINTAB: BinWrapper = BinWrapper(Box::new([builtin {
+        node: hashnode {
+            next: null_mut(),
+            nam: cstr!("fastbrackets"),
+            flags: 0
+        },
+        handlerfunc: Some(bin_fastbrackets),
+        minargs: 1,
+        maxargs: 1,
+        funcid: 0,
+        optstr: null_mut(),
+        defopts: null_mut()
+    }]));
+}
 
 
 lazy_static! {
     pub static ref MODULE_FEATURES: FeaturesWrapper = FeaturesWrapper(features {
-        bn_list: unsafe { &BINTAB.0[0] as *const builtin as *mut builtin },
-        bn_size: unsafe { BINTAB.0.len() as c_int },
+        bn_list: &BINTAB.0[0] as *const builtin as *mut builtin,
+        bn_size: BINTAB.0.len() as c_int,
         cd_list: null_mut(),
         cd_size: 0,
         mf_list: null_mut(),

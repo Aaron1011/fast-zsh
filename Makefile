@@ -1,16 +1,27 @@
+ZSH_VERSION = 5.4.2
+INSTALL_PATH = run/zsh_install/lib/zsh/$(ZSH_VERSION)/aaron
+
 all: target/fastbrackets
 
 run:
-	gdb -ex run --args ~/repos/zsh/Src/zsh test.sh
+	zsh/Src/zsh test.sh
 
-install: target/fastbrackets
-	cp target/fastbrackets.so /usr/lib/zsh/5.4.1/aaron/
+debug-install: target/debug/fastbrackets install
 
-target/fastbrackets: target/release/libfastbrackets.so
-	cp target/release/libfastbrackets.so target/fastbrackets.so
+release-install: target/release/fastbrackets install
+
+install:
+	mkdir -p $(INSTALL_PATH)
+	cp target/fastbrackets.so $(INSTALL_PATH)
+
+target/debug/fastbrackets: src/lib.rs Cargo.toml
+	cargo build -vv
+	cp target/debug/libfastbrackets.so target/fastbrackets.so
 
 target/release/libfastbrackets.so: src/lib.rs Cargo.toml
 	cargo build --release
+	cp target/release/libfastbrackets.so target/fastbrackets.so
+
 
 clean:
-	rm -rf target
+	cargo clean
