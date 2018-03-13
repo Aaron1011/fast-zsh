@@ -4,7 +4,7 @@ INSTALL_PATH = run/zsh_install/lib/zsh/$(ZSH_VERSION)/aaron
 all: target/fastbrackets
 
 run:
-	ZDOTDIR=./run ./run/zsh_install/bin/zsh
+	ZDOTDIR=./run ./run/zsh_install/bin/zsh test.sh
 
 debug-install: target/debug/fastbrackets install
 

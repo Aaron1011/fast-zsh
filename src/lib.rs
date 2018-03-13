@@ -46,21 +46,9 @@ impl Args {
         args_str = CStr::from_ptr(*raw_args as *const c_char).to_str().unwrap().to_owned();
 
         let args = args_str.splitn(4, ',').collect::<Vec<_>>();
+        let bracket_color_size = args[0].parse::<usize>().unwrap_or(0);
+        let cursor = args[1].parse::<usize>().unwrap_or(0);
 
-        let bracket_color_size = match args[0].parse::<usize>() {
-            Ok(s) => s,
-            Err(e) => {
-                return Err(Box::new(e))
-
-            }
-        };
-
-        let cursor = match args[1].parse::<usize>() {
-            Ok(s) => s,
-            Err(e) => {
-                return Err(Box::new(e))
-            }
-        };
 
         let widget = args[2].to_string();
         let buffer = args[3].to_string();
@@ -110,7 +98,7 @@ lazy_static! {
 #[no_mangle]
 #[allow(unused_variables)]
 pub extern fn setup_(m: Module) -> c_int {
-    println!("Setup!");
+    println!("Setup new!");
     0
 }
 
