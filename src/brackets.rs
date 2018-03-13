@@ -5,10 +5,10 @@ use std::os::raw::{c_char, c_void};
 use std::cell::RefCell;
 use std::ptr::null_mut;
 
-struct Highlight {
+struct Highlight<'a> {
     start: usize,
     end: usize,
-    style: String
+    style: &'a str
 }
 
 fn set_at_pos<T: Default>(vec: &mut Vec<T>, pos: usize, elem: T) {
@@ -43,6 +43,7 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
     let mut bracket_error = "".to_owned();
     let mut cursor_matching_bracket = "".to_owned();
     let mut bracket_level: Vec<String> = Vec::new();
+    let empty = "".to_owned();
 
     for (key, val) in get_styles() {
         match key.as_ref() {
@@ -137,14 +138,14 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
                 highlights.push(Highlight {
                     start: pos,
                     end: pos + 1,
-                    style: bracket_level.get((level - 1) % bracket_color_size + 1).unwrap_or(&"".to_owned()).clone()
+                    style: bracket_level.get((level - 1) % bracket_color_size + 1).unwrap_or(&empty)
                 });
             }
         } else {
             highlights.push(Highlight {
                 start: pos,
                 end: pos + 1,
-                style: bracket_error.clone()
+                style: &bracket_error
             });
         }
     }
@@ -157,7 +158,7 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
                 highlights.push(Highlight {
                     start: real_pos,
                     end: real_pos + 1,
-                    style: cursor_matching_bracket.clone()
+                    style: &cursor_matching_bracket
                 });
             }
         }
