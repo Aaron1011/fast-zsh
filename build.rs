@@ -17,7 +17,8 @@ fn main() {
     let bindings = bindgen::Builder::default()
         .header("wrapper.h")
         .hide_type("max_align_t")
-        .unstable_rust(true)
+        //.rustfmt_bindings(true)
+        //.rust_target(bindgen::RustTarget::Nightly)
         .generate()
         .expect("Unable to generate bindings");
 
@@ -41,10 +42,6 @@ fn compile_zsh() {
 
     env::set_current_dir(zsh_dir.clone()).unwrap();
 
-    run_command(
-            Command::new("make")
-                .args(&["clean", "realclean"]), 
-        "Failed to run make clean realclean");
 
     run_command(&mut Command::new(zsh_dir.join("Util/preconfig")),
         "Failed to run zsh/Util/preconfig");
@@ -55,6 +52,10 @@ fn compile_zsh() {
         "Failed to run zsh/configure");
 
 
+    run_command(
+            Command::new("make")
+                .args(&["clean"]), 
+        "Failed to run make clean");
 
     run_command(
         &mut Command::new("make"),
