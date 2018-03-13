@@ -17,8 +17,6 @@ fn main() {
     let bindings = bindgen::Builder::default()
         .header("wrapper.h")
         .hide_type("max_align_t")
-        //.rustfmt_bindings(true)
-        //.rust_target(bindgen::RustTarget::Nightly)
         .generate()
         .expect("Unable to generate bindings");
 
@@ -63,7 +61,7 @@ fn compile_zsh() {
 
     run_command(
         Command::new("make")
-            .args(&["install"]),
+            .args(&["install.bin", "install.modules", "install.fns"]),
         "Failed to run make install");
 
 

@@ -94,3 +94,5 @@ tags
 .idea/
 .gdb_history
 rust-zsh.iml
+
+run/zsh_install

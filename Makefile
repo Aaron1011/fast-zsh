@@ -4,7 +4,7 @@ INSTALL_PATH = run/zsh_install/lib/zsh/$(ZSH_VERSION)/aaron
 all: target/fastbrackets
 
 run:
-	zsh/Src/zsh test.sh
+	ZDOTDIR=./run ./run/zsh_install/bin/zsh
 
 debug-install: target/debug/fastbrackets install
 
@@ -24,4 +24,8 @@ target/release/libfastbrackets.so: src/lib.rs Cargo.toml
 
 
 clean:
+	rm -r run/zsh_install
 	cargo clean
+
+
+.PHONY: all run debug-install release-install install clean
