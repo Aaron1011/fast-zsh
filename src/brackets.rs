@@ -116,14 +116,6 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
                     //matching.insert(i, matching_pos);
                 }
             },
-            '\"' | '\'' => {
-                while let Some((_, &(ref character, _))) = it.next() {
-                    if *character != *chr {
-                        continue;
-                    }
-                    break;
-                }
-            },
             _ => continue
         }
     }
