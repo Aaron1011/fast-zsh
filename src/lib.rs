@@ -1,5 +1,3 @@
-#![feature(const_fn)]
-#![feature(const_ptr_null_mut)]
 #![feature(test)]
 #![feature(conservative_impl_trait)]
 
