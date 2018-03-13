@@ -69,9 +69,9 @@ impl Args {
 
         Ok(Args {
             buf: buffer.to_owned(),
-            bracket_color_size: bracket_color_size,
-            cursor: cursor,
-            widget: widget
+            bracket_color_size,
+            cursor,
+            widget
         })
     }
 }
