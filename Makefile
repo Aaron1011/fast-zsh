@@ -20,7 +20,7 @@ target/debug/fastbrackets: src/lib.rs Cargo.toml
 	cp target/debug/libfastbrackets.so target/fastbrackets.so
 
 target/release/libfastbrackets.so: src/lib.rs Cargo.toml
-	cargo build --release
+	cargo build --release -vv
 	cp target/release/libfastbrackets.so target/fastbrackets.so
 
 

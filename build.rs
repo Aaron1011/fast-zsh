@@ -16,7 +16,9 @@ fn main() {
     // the resulting bindings.
     let bindings = bindgen::Builder::default()
         .header("wrapper.h")
-        .hide_type("max_align_t")
+        .blacklist_type("max_align_t")
+        .blacklist_type("timex")
+        .blacklist_function("clock_adjtime")
         .generate()
         .expect("Unable to generate bindings");
 
