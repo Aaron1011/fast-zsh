@@ -2,7 +2,8 @@ extern crate bindgen;
 
 use std::path::PathBuf;
 use std::env;
-use std::fs;
+use std::fs::{self, OpenOptions};
+use std::io::Write;
 use std::process::Command;
 
 
@@ -24,8 +25,10 @@ fn main() {
 
     // Write the bindings to the $OUT_DIR/bindings.rs file.
     let out_path = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let path = out_path.join("bindings.rs_");
+
     bindings
-        .write_to_file(out_path.join("bindings.rs"))
+        .write_to_file(out_path)
         .expect("Couldn't write bindings!");
 
 }

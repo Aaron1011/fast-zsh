@@ -5,6 +5,7 @@
 extern crate lazy_static;
 extern crate test;
 
+#[cfg_attr(feature="clippy", allow(clippy))]
 mod ffi;
 pub mod brackets;
 
