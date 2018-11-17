@@ -9,14 +9,14 @@ test: debug-install
 
 debug-install: target/debug/fastbrackets install
 
-release-install: target/release/fastbrackets install
+release-install: target/release/libfastbrackets.so install
 
 install:
 	mkdir -p $(INSTALL_PATH)
 	cp target/fastbrackets.so $(INSTALL_PATH)
 
 target/debug/fastbrackets: src/lib.rs Cargo.toml
-	cargo build -vv
+	cargo build
 	cp target/debug/libfastbrackets.so target/fastbrackets.so
 
 target/release/libfastbrackets.so: src/lib.rs Cargo.toml
