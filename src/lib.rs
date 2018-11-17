@@ -97,33 +97,28 @@ lazy_static! {
 #[no_mangle]
 #[allow(unused_variables)]
 pub extern fn setup_(m: Module) -> c_int {
-    println!("Setup new!");
     0
 }
 
 #[no_mangle]
 #[allow(unused_variables)]
 pub extern fn boot_(m: Module) -> c_int {
-    println!("Boot!");
     0
 }
 
 #[no_mangle]
 #[allow(unused_variables)]
 pub extern fn cleanup_(m: Module) -> c_int {
-    println!("Cleanup!");
     0
 }
 
 #[no_mangle]
 #[allow(unused_variables)]
 pub extern fn finish_(m: Module) -> c_int {
-    println!("Finish!");
     0
 }
 #[no_mangle]
 pub unsafe extern fn features_(m: Module, features: *mut *mut *mut c_char) -> c_int {
-    println!("Features!");
     *features = featuresarray(m, &MODULE_FEATURES.0 as *const features as *mut features);
     0
 }
@@ -132,7 +127,6 @@ pub unsafe extern fn features_(m: Module, features: *mut *mut *mut c_char) -> c_
 
 #[no_mangle]
 pub unsafe extern fn enables_(m: Module, enables: *mut *mut c_int) -> c_int {
-    println!("Enables!");
     handlefeatures(m, &MODULE_FEATURES.0 as *const features as *mut features, enables)
 }
 
