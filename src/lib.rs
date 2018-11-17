@@ -43,7 +43,7 @@ pub type ParseArgsError = Box<Error>;
 impl Args {
     pub unsafe fn from_raw(raw_args: *mut *mut c_char) -> Result<Args, ParseArgsError> {
         let args_str;
-        args_str = CStr::from_ptr(*raw_args as *const c_char).to_str().unwrap().to_owned();
+        args_str = CStr::from_ptr(*raw_args as *const c_char).to_str()?.to_owned();
 
         let args = args_str.splitn(4, ',').collect::<Vec<_>>();
         let bracket_color_size = args[0].parse::<usize>().unwrap_or(0);
