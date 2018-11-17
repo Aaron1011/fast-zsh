@@ -1,5 +1,4 @@
 #![feature(test)]
-#![feature(conservative_impl_trait)]
 
 
 #[macro_use]
