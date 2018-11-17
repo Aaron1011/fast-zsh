@@ -5,7 +5,6 @@
 extern crate lazy_static;
 extern crate test;
 
-#[allow(warnings)]
 mod ffi;
 pub mod brackets;
 
@@ -95,26 +94,22 @@ lazy_static! {
 
 
 #[no_mangle]
-#[allow(unused_variables)]
-pub extern fn setup_(m: Module) -> c_int {
+pub extern fn setup_(_m: Module) -> c_int {
     0
 }
 
 #[no_mangle]
-#[allow(unused_variables)]
-pub extern fn boot_(m: Module) -> c_int {
+pub extern fn boot_(_m: Module) -> c_int {
     0
 }
 
 #[no_mangle]
-#[allow(unused_variables)]
-pub extern fn cleanup_(m: Module) -> c_int {
+pub extern fn cleanup_(_m: Module) -> c_int {
     0
 }
 
 #[no_mangle]
-#[allow(unused_variables)]
-pub extern fn finish_(m: Module) -> c_int {
+pub extern fn finish_(_m: Module) -> c_int {
     0
 }
 #[no_mangle]
@@ -131,8 +126,7 @@ pub unsafe extern fn enables_(m: Module, enables: *mut *mut c_int) -> c_int {
 }
 
 #[no_mangle]
-#[allow(unused_variables)]
-pub unsafe extern fn bin_fastbrackets(name: *mut c_char, raw_args: *mut *mut c_char, options: Options, func: c_int) -> c_int {
+pub unsafe extern fn bin_fastbrackets(_name: *mut c_char, raw_args: *mut *mut c_char, _options: Options, _func: c_int) -> c_int {
     return match std::panic::catch_unwind(|| {
         let args = Args::from_raw(raw_args).expect("Failed to parse arguments!");
         brackets_paint(args.bracket_color_size, &args.buf, args.cursor, &args.widget);
