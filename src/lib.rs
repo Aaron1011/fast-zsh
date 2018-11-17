@@ -140,12 +140,20 @@ pub unsafe extern fn enables_(m: Module, enables: *mut *mut c_int) -> c_int {
 #[no_mangle]
 #[allow(unused_variables)]
 pub unsafe extern fn bin_fastbrackets(name: *mut c_char, raw_args: *mut *mut c_char, options: Options, func: c_int) -> c_int {
-    let args = Args::from_raw(raw_args).unwrap();
+    return match std::panic::catch_unwind(|| {
+        let args = Args::from_raw(raw_args).expect("Failed to parse arguments!");
+        brackets_paint(args.bracket_color_size, &args.buf, args.cursor, &args.widget);
+    }) {
+        Err(e) => {
+            eprintln!("Error in fastbrackets: {:?}", e);
+            1
+        },
+        _ => 0
+    }
 //unsafe { zwarnnam(name, CString::new(format!("Bad bracket color size (should be impossible): {:?} {:?}", args[0], e)).unwrap().into_raw()) } ;
 //unsafe { zwarnnam(name, CString::new(format!("Invalid cursor argument: {:?} {:?}", args[2], e)).unwrap().into_raw()) } ;
-    brackets_paint(args.bracket_color_size, &args.buf, args.cursor, &args.widget);
 
-    0
+    //0
 }
 
 
