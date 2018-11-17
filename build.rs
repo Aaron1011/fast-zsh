@@ -2,8 +2,7 @@ extern crate bindgen;
 
 use std::path::PathBuf;
 use std::env;
-use std::fs::{self, OpenOptions};
-use std::io::Write;
+use std::fs;
 use std::process::Command;
 
 
@@ -28,7 +27,7 @@ fn main() {
     let path = out_path.join("bindings.rs_");
 
     bindings
-        .write_to_file(out_path)
+        .write_to_file(path)
         .expect("Couldn't write bindings!");
 
 }

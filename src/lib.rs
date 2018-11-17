@@ -128,7 +128,7 @@ pub unsafe extern fn enables_(m: Module, enables: *mut *mut c_int) -> c_int {
 
 #[no_mangle]
 pub unsafe extern fn bin_fastbrackets(_name: *mut c_char, raw_args: *mut *mut c_char, _options: Options, _func: c_int) -> c_int {
-    return match std::panic::catch_unwind(|| {
+    match std::panic::catch_unwind(|| {
         let args = Args::from_raw(raw_args).expect("Failed to parse arguments!");
         brackets_paint(args.bracket_color_size, &args.buf, args.cursor, &args.widget);
     }) {

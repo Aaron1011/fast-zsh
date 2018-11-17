@@ -75,8 +75,7 @@ pub fn brackets_paint(bracket_color_size: usize, buf: &str, cursor: usize, widge
 
     let mut highlights: Vec<Highlight> = Vec::new();
 
-    let mut it = chars.iter().enumerate();
-    while let Some((i, &(ref chr, ref match_pos))) = it.next() {
+    for (i, &(ref chr, ref match_pos)) in chars.iter().enumerate() {
         match *chr {
             '(' | '[' | '{' => {
                 if level_neg == 0 {
@@ -188,10 +187,10 @@ fn add_highlights(highlights: &[Highlight]) {
         let alloc_size = alloc_len * mem::size_of::<*const c_char>() + 1; // store NULL at the end
 
         let buf: *mut *mut c_char = zalloc(alloc_size) as *mut *mut c_char;
-        *buf.offset(alloc_len as isize) = null_mut() as *mut c_char;
+        *buf.add(alloc_len) = null_mut() as *mut c_char;
         for (i, highlight) in highlights.iter().enumerate() {
             let highlight_str =format!("{} {} {}", highlight.start, highlight.end, highlight.style); 
-            *buf.offset(i as isize) = str_to_ptr(&highlight_str) as *mut c_char;
+            *buf.add(i) = str_to_ptr(&highlight_str) as *mut c_char;
         }
 
         setaparam(region_highlight_str, buf);
