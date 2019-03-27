@@ -7,7 +7,7 @@ authors = ["Aaron Hill <aa1ronham@gmail.com>"]
 lazy_static = "1.2.0"
 
 [build-dependencies]
-bindgen = "0.43.1"
+bindgen = "0.49.0"
 
 
 [lib]
